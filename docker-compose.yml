@@ -1,0 +1,65 @@
+name: oda
+
+# Dev infra only. The app itself runs on the host via `npm run dev`.
+# Production compose (app + caddy included) is a slice-4/hosting concern.
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: oda
+      POSTGRES_PASSWORD: oda-dev-only-change-me
+      POSTGRES_DB: oda
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U oda -d oda"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: oda
+      MINIO_ROOT_PASSWORD: oda-dev-only-change-me
+    ports:
+      - "9000:9000"   # S3 API
+      - "9001:9001"   # web console
+    volumes:
+      - miniodata:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      sh -c "mc alias set local http://minio:9000 oda oda-dev-only-change-me
+      && mc mb --ignore-existing local/oda-media"
+    restart: "no"
+
+  livekit:
+    image: livekit/livekit-server:latest
+    command: --dev --bind 0.0.0.0
+    # --dev mode: API key `devkey`, secret `secret`. Dev only — real config
+    # with generated keys lands with the hosting slice.
+    ports:
+      - "7880:7880"      # HTTP/WebSocket (signaling)
+      - "7881:7881"      # RTC TCP fallback
+      - "7882:7882/udp"  # RTC UDP
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  miniodata:

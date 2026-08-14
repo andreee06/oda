@@ -1,0 +1,99 @@
+// Oda data model — reviewed & approved 2026-08-14 (SPEC.md ask-first gate).
+// Conventions: cuid ids, snake_case plural tables via @@map, String channel type
+// (validated by zod in @oda/shared — avoids enum migrations when voice lands).
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id             String        @id @default(cuid())
+  username       String        @unique
+  displayName    String
+  passwordHash   String // argon2id — never leaves the server
+  avatarUrl      String?
+  createdAt      DateTime      @default(now())
+  sessions       Session[]
+  memberships    ServerMember[]
+  messages       Message[]
+  createdInvites Invite[]      @relation("InviteCreator")
+
+  @@map("users")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  token     String   @unique // opaque, 256-bit random
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@map("sessions")
+}
+
+model Invite {
+  code      String    @id // e.g. "oda-x7k2p9"
+  creatorId String
+  creator   User      @relation("InviteCreator", fields: [creatorId], references: [id])
+  maxUses   Int       @default(1)
+  uses      Int       @default(0)
+  expiresAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@map("invites")
+}
+
+model Server {
+  id        String         @id @default(cuid())
+  name      String
+  iconUrl   String?
+  ownerId   String
+  createdAt DateTime       @default(now())
+  channels  Channel[]
+  members   ServerMember[]
+
+  @@map("servers")
+}
+
+model ServerMember {
+  userId   String
+  serverId String
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  server   Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  joinedAt DateTime @default(now())
+
+  @@id([userId, serverId])
+  @@map("server_members")
+}
+
+model Channel {
+  id        String    @id @default(cuid())
+  serverId  String
+  server    Server    @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  name      String
+  type      String // "text" | "voice" — zod-validated at the boundary
+  createdAt DateTime  @default(now())
+  messages  Message[]
+
+  @@map("channels")
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  channelId String
+  channel   Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id])
+  content   String
+  editedAt  DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([channelId, createdAt]) // cursor-pagination hot path
+  @@map("messages")
+}
