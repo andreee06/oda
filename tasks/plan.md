@@ -32,7 +32,7 @@ same gateway + shared contracts; no re-architecture needed.
 
 1. **Slice 1 — Text MVP** (tasks 1–8): scaffold → infra → schema → auth →
    channels → gateway → messages → client shell.
-2. **Slice 2 — Rich content**: MinIO uploads, GIF avatars, Tenor picker, embeds.
+2. **Slice 2 — Rich content**: MinIO uploads, GIF avatars, GIF picker (GIPHY; Tenor was the original plan but Google killed the API mid-build), embeds.
 3. **Slice 3 — Social layer**: presence, typing, roles, invite-link UI.
 4. **Slice 4 — Voice**: LiveKit token endpoint, voice-channel UI, mute/deafen.
 

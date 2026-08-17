@@ -46,7 +46,8 @@ services:
         condition: service_healthy
     entrypoint: >
       sh -c "mc alias set local http://minio:9000 oda oda-dev-only-change-me
-      && mc mb --ignore-existing local/oda-media"
+      && mc mb --ignore-existing local/oda-media
+      && mc anonymous set download local/oda-media"
     restart: "no"
 
   livekit:

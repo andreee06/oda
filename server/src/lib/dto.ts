@@ -1,6 +1,15 @@
-import type { ChannelDTO, MessageDTO, UserDTO } from "@oda/shared";
+import { z } from "zod";
+import {
+  AttachmentDTO,
+  EmbedDTO,
+  type ChannelDTO,
+  type EmojiDTO,
+  type MessageDTO,
+  type UserDTO,
+} from "@oda/shared";
 import type {
   ChannelModel,
+  EmojiModel,
   MessageModel,
   UserModel,
 } from "../generated/prisma/models.js";
@@ -33,7 +42,19 @@ export function toMessageDTO(
     channelId: message.channelId,
     author: toUserDTO(message.author),
     content: message.content,
+    // JSON columns — validate through the shared schemas, never trust blindly
+    attachments: z.array(AttachmentDTO).parse(message.attachments ?? []),
+    embeds: z.array(EmbedDTO).parse(message.embeds ?? []),
     editedAt: message.editedAt?.toISOString() ?? null,
     createdAt: message.createdAt.toISOString(),
+  };
+}
+
+export function toEmojiDTO(emoji: EmojiModel): EmojiDTO {
+  return {
+    id: emoji.id,
+    serverId: emoji.serverId,
+    name: emoji.name,
+    imageUrl: emoji.imageUrl,
   };
 }

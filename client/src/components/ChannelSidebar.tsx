@@ -1,6 +1,7 @@
 import type { ChannelDTO } from "@oda/shared";
 import { api } from "../lib/api";
 import { useAppStore } from "../stores/app";
+import UserPanel from "./UserPanel";
 
 export default function ChannelSidebar() {
   const server = useAppStore((s) =>
@@ -49,11 +50,12 @@ export default function ChannelSidebar() {
       {isOwner && (
         <button
           onClick={() => void createChannel()}
-          className="m-2 rounded px-2 py-1 text-left text-xs text-zinc-500 hover:text-zinc-200"
+          className="mx-2 mt-1 rounded px-2 py-1 text-left text-xs text-zinc-500 hover:text-zinc-200"
         >
           + create channel
         </button>
       )}
+      <UserPanel />
     </aside>
   );
 }

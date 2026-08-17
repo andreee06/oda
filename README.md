@@ -15,17 +15,21 @@ servers and channels, and chat in real time.
 - servers and text channels (create / rename / delete)
 - realtime messages over websockets — no refreshing
 - message history with pagination ("load older")
+- image uploads + attachments, inline gif/image rendering
+- avatars, animated gifs included (free here, take that nitro)
+- link embed previews (opengraph)
+- custom server emoji with :shortcode: rendering
+- gif picker (giphy — needs a free api key in `server/.env`)
 - member list, optimistic sending, reconnect with backoff
-- tests for the whole backend (67 at last count)
+- tests for the whole backend (90 at last count)
 
 ## what's not done yet
 
-- image/file uploads and animated avatars
-- gif picker (tenor)
-- link previews
 - online presence + typing indicators
 - voice channels (going to use self-hosted [LiveKit](https://livekit.io) —
   not crazy enough to hand-roll WebRTC)
+- proper invite links (right now it's invite *codes*)
+- message edit/delete ui
 - actual deployment (looking at oracle's free tier)
 
 ## stack
@@ -71,6 +75,10 @@ npm run lint
   after a docker daemon restart. that was a fun hour.
 - cookies + a custom header on mutations is all you need for CSRF on an app
   like this. no token dance required.
+- zustand selectors that return a fresh `[]` every call = infinite render
+  loop. keep a stable empty constant around.
+- prisma 7 doesn't regenerate the client on `migrate dev` — if the api starts
+  500ing after a schema change, run `db:generate` first. lost some time there.
 
 ## notes
 

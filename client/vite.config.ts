@@ -12,6 +12,12 @@ export default defineConfig({
         target: "ws://localhost:3001",
         ws: true,
       },
+      // uploaded media lives in minio; /media/oda-media/<key> → bucket path.
+      // prod: caddy proxies /media the same way.
+      "/media": {
+        target: "http://localhost:9000",
+        rewrite: (p) => p.replace(/^\/media/, ""),
+      },
     },
   },
 });

@@ -14,13 +14,15 @@
 - [x] client: login page, server rail / channel list / chat / member list,
       optimistic send with rollback, reconnect with backoff
 
-## slice 2 — make it pretty
+## slice 2 — make it pretty ✅ (done 2026-08-17)
 
-- [ ] file/image uploads (minio)
-- [ ] animated gif avatars (free here, take that nitro)
-- [ ] tenor gif picker
-- [ ] link embed previews
-- [ ] custom server emoji
+- [x] image uploads (minio, 8MB cap, mime allowlist, /media proxy)
+- [x] avatars incl. animated gifs — user panel, member list, chat (live USER_UPDATE)
+- [x] message attachments + inline image rendering
+- [x] gif picker (giphy, server-proxied; needs GIPHY_API_KEY in server/.env — 503s gracefully without it)
+  - note: originally tenor, but google killed the tenor api on 2026-06-30. migrated to giphy.
+- [x] link embeds (OpenGraph unfurl, 3s timeout, best-effort)
+- [x] custom server emoji (owner uploads, :shortcode: rendering, picker)
 
 ## slice 3 — social stuff
 

@@ -8,6 +8,7 @@ import { prisma } from "../lib/db.js";
 import { ApiError } from "../lib/errors.js";
 import { toMessageDTO } from "../lib/dto.js";
 import { getServerForMember } from "./servers.js";
+import { unfurlUrls } from "./embeds.js";
 
 /** Load channel + verify the user is a member of its server (404 otherwise). */
 async function getChannelForMember(channelId: string, userId: string) {
@@ -25,8 +26,16 @@ export async function createMessage(
   body: CreateMessageBody,
 ): Promise<MessageDTO> {
   await getChannelForMember(channelId, userId);
+  const attachments = (body.attachmentUrls ?? []).map((url) => ({ url }));
+  const embeds = await unfurlUrls(body.content);
   const message = await prisma.message.create({
-    data: { channelId, authorId: userId, content: body.content },
+    data: {
+      channelId,
+      authorId: userId,
+      content: body.content,
+      attachments,
+      embeds,
+    },
     include: { author: true },
   });
   return toMessageDTO(message);

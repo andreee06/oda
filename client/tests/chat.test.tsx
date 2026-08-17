@@ -55,6 +55,8 @@ describe("ChatView", () => {
       channelId: "c1",
       author: user,
       content: "hello",
+      attachments: [],
+      embeds: [],
       editedAt: null,
       createdAt: "2026-08-14T12:00:00.000Z",
     });
@@ -84,6 +86,8 @@ describe("ChatView", () => {
       channelId: "c1",
       author: user,
       content: "hello",
+      attachments: [],
+      embeds: [],
       editedAt: null,
       createdAt: "2026-08-14T12:00:00.000Z",
     };
@@ -101,6 +105,41 @@ describe("ChatView", () => {
       expect(list).toHaveLength(1);
       expect(list[0]!.id).toBe("m1");
     });
+  });
+
+  it("renders custom emoji shortcodes and image attachments", () => {
+    useAppStore.setState({
+      emojis: {
+        s1: [
+          {
+            id: "e1",
+            serverId: "s1",
+            name: "pepelaugh",
+            imageUrl: "/media/oda-media/pepe.png",
+          },
+        ],
+      },
+      messages: {
+        c1: [
+          {
+            id: "m9",
+            channelId: "c1",
+            author: user,
+            content: "lol :pepelaugh:",
+            attachments: [{ url: "/media/oda-media/cat.png" }],
+            embeds: [],
+            editedAt: null,
+            createdAt: "2026-08-14T12:00:00.000Z",
+          },
+        ],
+      },
+    });
+
+    render(<ChatView />);
+    const emojiImg = screen.getByAltText(":pepelaugh:");
+    expect(emojiImg.getAttribute("src")).toBe("/media/oda-media/pepe.png");
+    const attachment = screen.getByAltText("attachment");
+    expect(attachment.getAttribute("src")).toBe("/media/oda-media/cat.png");
   });
 
   it("rolls back the optimistic message on failure", async () => {

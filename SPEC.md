@@ -14,7 +14,8 @@ channels, GIF avatars, GIF picker, uploads, presence, and voice channels.
 - Servers with text channels, create/rename/delete
 - Realtime messaging over WebSocket, persisted history with pagination
 - Rich content: image/file uploads, animated GIF avatars, custom emoji,
-  Tenor GIF picker, link-embed previews
+  GIPHY GIF picker (Tenor was the original choice, but Google shut the Tenor
+  API down on 2026-06-30), link-embed previews
 - Presence (online/idle/offline) + typing indicators
 - Roles: owner / member (minimal permission model)
 - Voice channels via self-hosted LiveKit (mute/deafen, speaking indicator)
@@ -33,7 +34,7 @@ screen share, mobile/native apps, federation, bots/webhooks, E2E encryption.
 | Media | MinIO (S3 API) via `@aws-sdk/client-s3` | Avatars/uploads/emoji; swap to real S3 later |
 | Voice | LiveKit server (self-hosted, Docker) + `livekit-client` | Built-in TURN = no VPN/NAT pain; don't hand-roll an SFU |
 | Frontend | React 19 + Vite 7 + Tailwind CSS 4 | Biggest ecosystem, Discord-like reference code exists |
-| GIFs | Tenor API v2 (free key) | GIF picker + embed rendering |
+| GIFs | GIPHY API (free key) | GIF picker + embed rendering. Tenor was planned but Google killed the API on 2026-06-30. |
 | Auth | Opaque session token, httpOnly Secure cookie | Simpler & safer than JWT-in-localStorage; CSRF token for mutations |
 | Monorepo | npm workspaces | pnpm not installed; npm 12 workspaces suffice |
 
@@ -136,9 +137,9 @@ export const createMessage: RouteHandler = async (req, reply) => {
    join the default server, and exchange messages in real time (<150 ms LAN latency,
    no refresh).
 2. Reloading the client restores full message history (paginated, 50/page).
-3. A user can set an animated GIF avatar and it animates in chat + member list.
-4. `/giphy`-style picker inserts a Tenor GIF that renders inline for everyone.
-5. An image upload appears inline for all members within 2s.
+3. A user can set an animated GIF avatar and it animates in chat + member list. ✅ slice 2
+4. `/giphy`-style picker inserts a GIF that renders inline for everyone. ✅ slice 2 (needs GIPHY_API_KEY)
+5. An image upload appears inline for all members within 2s. ✅ slice 2
 6. Presence list updates within 5s of connect/disconnect; typing indicator shows
    and expires after 3s of silence.
 7. Two users in a voice channel hear each other through LiveKit (dev: same LAN).
@@ -148,6 +149,6 @@ export const createMessage: RouteHandler = async (req, reply) => {
 ## open questions
 
 1. ~~Project name~~ → **Oda**.
-2. Tenor API key — register a free one when slice 2 starts.
+2. GIPHY API key — register a free one (developers.giphy.com, instant beta key). Tenor is no longer an option: Google shut it down 2026-06-30.
 3. Emoji: Unicode-only at launch, or custom server emoji in v1? (currently: custom in v1)
 4. Message edit/delete — assume YES (soft-edit, hard-delete) for v1? Not listed above; confirm.

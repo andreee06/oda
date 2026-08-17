@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import type {
   ChannelDTO,
+  EmojiDTO,
   MessageDTO,
   MessagePage,
   ServerWithChannelsDTO,
@@ -18,6 +19,8 @@ interface AppState {
   activeChannelId: string | null;
   /** channelId → messages ascending by createdAt (server returns desc). */
   messages: Record<string, MessageDTO[]>;
+  /** serverId → custom emoji */
+  emojis: Record<string, EmojiDTO[]>;
   nextCursors: Record<string, string | null>;
   connectionStatus: ConnectionStatus;
   sendError: string | null;
@@ -32,8 +35,10 @@ interface AppState {
   addChannel: (channel: ChannelDTO) => void;
   removeChannel: (channelId: string) => void;
   addServer: (server: ServerWithChannelsDTO) => void;
+  updateUser: (user: UserDTO) => void;
+  addEmoji: (emoji: EmojiDTO) => void;
   setConnectionStatus: (status: ConnectionStatus) => void;
-  sendMessage: (content: string) => Promise<void>;
+  sendMessage: (content: string, attachmentUrls?: string[]) => Promise<void>;
 }
 
 const initialState = {
@@ -43,6 +48,7 @@ const initialState = {
   activeServerId: null,
   activeChannelId: null,
   messages: {},
+  emojis: {},
   nextCursors: {},
   connectionStatus: "connecting" as ConnectionStatus,
   sendError: null,
@@ -69,10 +75,14 @@ export const useAppStore = create<AppState>()((set, get) => ({
       server.channels[0]?.id ??
       null;
     set({ activeServerId: serverId, activeChannelId: channelId });
-    const { members } = await api<{ members: UserDTO[] }>(
-      `/api/servers/${serverId}/members`,
-    );
-    set({ members });
+    const [{ members }, { emojis }] = await Promise.all([
+      api<{ members: UserDTO[] }>(`/api/servers/${serverId}/members`),
+      api<{ emojis: EmojiDTO[] }>(`/api/servers/${serverId}/emojis`),
+    ]);
+    set((state) => ({
+      members,
+      emojis: { ...state.emojis, [serverId]: emojis },
+    }));
     if (channelId && !get().messages[channelId]) {
       await get().loadChannelMessages(channelId);
     }
@@ -130,7 +140,7 @@ export const useAppStore = create<AppState>()((set, get) => ({
     });
   },
 
-  sendMessage: async (content) => {
+  sendMessage: async (content, attachmentUrls) => {
     const { activeChannelId, user } = get();
     if (!activeChannelId || !user) return;
     const tempId = `temp-${crypto.randomUUID()}`;
@@ -139,6 +149,8 @@ export const useAppStore = create<AppState>()((set, get) => ({
       channelId: activeChannelId,
       author: user,
       content,
+      attachments: (attachmentUrls ?? []).map((url) => ({ url })),
+      embeds: [],
       editedAt: null,
       createdAt: new Date().toISOString(),
     };
@@ -155,7 +167,12 @@ export const useAppStore = create<AppState>()((set, get) => ({
     try {
       const real = await api<MessageDTO>(
         `/api/channels/${activeChannelId}/messages`,
-        { method: "POST", body: { content } },
+        {
+          method: "POST",
+          body: attachmentUrls?.length
+            ? { content, attachmentUrls }
+            : { content },
+        },
       );
       set((state) => {
         const list = state.messages[activeChannelId] ?? [];
@@ -208,6 +225,20 @@ export const useAppStore = create<AppState>()((set, get) => ({
         ? {}
         : { servers: [...state.servers, server] },
     ),
+
+  updateUser: (updated) =>
+    set((state) => ({
+      user: state.user?.id === updated.id ? updated : state.user,
+      members: state.members.map((m) => (m.id === updated.id ? updated : m)),
+    })),
+
+  addEmoji: (emoji) =>
+    set((state) => ({
+      emojis: {
+        ...state.emojis,
+        [emoji.serverId]: [...(state.emojis[emoji.serverId] ?? []), emoji],
+      },
+    })),
 
   setConnectionStatus: (connectionStatus) => set({ connectionStatus }),
 }));

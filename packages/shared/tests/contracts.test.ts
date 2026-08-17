@@ -2,13 +2,18 @@ import { describe, expect, it } from "vitest";
 import type { z } from "zod";
 import {
   CreateChannelBody,
+  CreateEmojiBody,
   CreateMessageBody,
   CreateServerBody,
+  EmbedDTO,
+  EmojiDTO,
   GetMessagesQuery,
+  GifSearchResponse,
   LoginBody,
   MeResponse,
   MessageDTO,
   RegisterBody,
+  SetAvatarBody,
   UserDTO,
   WsClientMessage,
   WsEvent,
@@ -147,6 +152,64 @@ describe("MeResponse", () => {
         },
       ],
     });
+  });
+});
+
+describe("slice-2 contracts", () => {
+  it("MessageDTO defaults attachments/embeds to [] for old payloads", () => {
+    const parsed = MessageDTO.parse(messageSample); // sample has neither field
+    expect(parsed.attachments).toEqual([]);
+    expect(parsed.embeds).toEqual([]);
+  });
+
+  it("MessageDTO round-trips with attachments + embeds", () => {
+    roundTrips(MessageDTO, {
+      ...messageSample,
+      attachments: [{ url: "/media/oda-media/x.png" }],
+      embeds: [
+        { url: "https://example.com", title: "Ex", description: null, imageUrl: null },
+      ],
+    });
+  });
+
+  it("EmbedDTO / EmojiDTO / GifSearchResponse round-trip", () => {
+    roundTrips(EmbedDTO, {
+      url: "https://example.com",
+      title: "t",
+      description: "d",
+      imageUrl: "https://example.com/i.png",
+    });
+    roundTrips(EmojiDTO, {
+      id: "e1",
+      serverId: "s1",
+      name: "pepelaugh",
+      imageUrl: "/media/oda-media/e.png",
+    });
+    roundTrips(GifSearchResponse, {
+      results: [{ id: "g1", url: "https://t.co/x.gif", previewUrl: "https://t.co/xs.gif" }],
+    });
+  });
+
+  it("SetAvatarBody requires a /media path", () => {
+    roundTrips(SetAvatarBody, { avatarUrl: "/media/oda-media/a.gif" });
+    expect(
+      SetAvatarBody.safeParse({ avatarUrl: "https://evil.com/a.gif" }).success,
+    ).toBe(false);
+  });
+
+  it("CreateEmojiBody validates shortcode names", () => {
+    roundTrips(CreateEmojiBody, {
+      name: "pepe_laugh",
+      imageUrl: "/media/oda-media/e.png",
+    });
+    expect(
+      CreateEmojiBody.safeParse({ name: "Bad Name", imageUrl: "/media/x" })
+        .success,
+    ).toBe(false);
+  });
+
+  it("WsEvent parses USER_UPDATE", () => {
+    roundTrips(WsEvent, { type: "USER_UPDATE", data: { user: userSample } });
   });
 });
 

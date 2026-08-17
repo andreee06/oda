@@ -107,6 +107,8 @@ describe("gateway", () => {
         avatarUrl: null,
       },
       content: "secret plans",
+      attachments: [],
+      embeds: [],
       editedAt: null,
       createdAt: "2026-08-14T12:00:00.000Z",
     };

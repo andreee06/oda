@@ -1,4 +1,5 @@
 import { useAppStore } from "../stores/app";
+import Avatar from "./Avatar";
 
 export default function MemberList() {
   const members = useAppStore((s) => s.members);
@@ -10,9 +11,7 @@ export default function MemberList() {
       </h3>
       {members.map((m) => (
         <div key={m.id} className="flex items-center gap-2 py-1">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-sm font-semibold">
-            {m.displayName.slice(0, 1).toUpperCase()}
-          </div>
+          <Avatar user={m} size="h-8 w-8 text-xs" />
           <span className="truncate text-sm text-zinc-300">
             {m.displayName}
           </span>

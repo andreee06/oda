@@ -36,3 +36,25 @@ export async function api<T = unknown>(
   if (res.status === 204) return undefined as T;
   return (await res.json()) as T;
 }
+
+/** Multipart upload (no JSON content-type — the browser sets the boundary). */
+export async function apiUpload(
+  path: string,
+  file: File,
+): Promise<{ url: string }> {
+  const form = new FormData();
+  form.append("file", file);
+  const res = await fetch(path, {
+    method: "POST",
+    credentials: "include",
+    headers: { "x-oda-client": "web" },
+    body: form,
+  });
+  if (!res.ok) {
+    const data = (await res.json().catch(() => null)) as {
+      error?: string;
+    } | null;
+    throw new ApiRequestError(res.status, data?.error ?? res.statusText);
+  }
+  return (await res.json()) as { url: string };
+}

@@ -57,6 +57,7 @@ model Server {
   createdAt DateTime       @default(now())
   channels  Channel[]
   members   ServerMember[]
+  emojis    Emoji[]
 
   @@map("servers")
 }
@@ -72,6 +73,19 @@ model ServerMember {
   @@map("server_members")
 }
 
+model Emoji {
+  id         String   @id @default(cuid())
+  serverId   String
+  server     Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  name       String // shortcode without colons, e.g. "pepelaugh"
+  imageUrl   String // /media/... path from /api/uploads
+  uploaderId String
+  createdAt  DateTime @default(now())
+
+  @@unique([serverId, name])
+  @@map("emojis")
+}
+
 model Channel {
   id        String    @id @default(cuid())
   serverId  String
@@ -85,14 +99,16 @@ model Channel {
 }
 
 model Message {
-  id        String   @id @default(cuid())
-  channelId String
-  channel   Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
-  authorId  String
-  author    User     @relation(fields: [authorId], references: [id])
-  content   String
-  editedAt  DateTime?
-  createdAt DateTime @default(now())
+  id          String   @id @default(cuid())
+  channelId   String
+  channel     Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  authorId    String
+  author      User     @relation(fields: [authorId], references: [id])
+  content     String
+  attachments Json? // [{ url }] — uploaded files via /api/uploads
+  embeds      Json? // [{ url, title, description, imageUrl }] — OG unfurl results
+  editedAt    DateTime?
+  createdAt   DateTime @default(now())
 
   @@index([channelId, createdAt]) // cursor-pagination hot path
   @@map("messages")

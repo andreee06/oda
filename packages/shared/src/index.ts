@@ -43,11 +43,35 @@ export const ServerWithChannelsDTO = ServerDTO.extend({
 });
 export type ServerWithChannelsDTO = z.infer<typeof ServerWithChannelsDTO>;
 
+export const AttachmentDTO = z.object({
+  url: z.string(),
+});
+export type AttachmentDTO = z.infer<typeof AttachmentDTO>;
+
+export const EmbedDTO = z.object({
+  url: z.string(),
+  title: z.string().nullable(),
+  description: z.string().nullable(),
+  imageUrl: z.string().nullable(),
+});
+export type EmbedDTO = z.infer<typeof EmbedDTO>;
+
+export const EmojiDTO = z.object({
+  id: Id,
+  serverId: Id,
+  name: z.string(),
+  imageUrl: z.string(),
+});
+export type EmojiDTO = z.infer<typeof EmojiDTO>;
+
 export const MessageDTO = z.object({
   id: Id,
   channelId: Id,
   author: UserDTO,
   content: z.string(),
+  // .default([]) keeps old fixtures/clients working; server always sends them
+  attachments: z.array(AttachmentDTO).default([]),
+  embeds: z.array(EmbedDTO).default([]),
   editedAt: z.iso.datetime().nullable(),
   createdAt: z.iso.datetime(), // serialized via Date.toISOString()
 });
@@ -100,8 +124,22 @@ export type CreateChannelBody = z.infer<typeof CreateChannelBody>;
 
 export const CreateMessageBody = z.object({
   content: z.string().min(1).max(4000),
+  attachmentUrls: z.array(z.string()).max(10).optional(),
 });
 export type CreateMessageBody = z.infer<typeof CreateMessageBody>;
+
+export const SetAvatarBody = z.object({
+  avatarUrl: z.string().regex(/^\/media\//, "must be an uploaded /media path"),
+});
+export type SetAvatarBody = z.infer<typeof SetAvatarBody>;
+
+export const CreateEmojiBody = z.object({
+  name: z
+    .string()
+    .regex(/^[a-z0-9_]{2,32}$/, "lowercase letters, digits, underscores"),
+  imageUrl: z.string().regex(/^\/media\//, "must be an uploaded /media path"),
+});
+export type CreateEmojiBody = z.infer<typeof CreateEmojiBody>;
 
 export const RenameChannelBody = z.object({
   name: z
@@ -115,6 +153,18 @@ export const GetMessagesQuery = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(50),
 });
 export type GetMessagesQuery = z.infer<typeof GetMessagesQuery>;
+
+export const GifResultDTO = z.object({
+  id: z.string(),
+  url: z.string(), // full-size gif
+  previewUrl: z.string(), // tiny preview for the picker grid
+});
+export type GifResultDTO = z.infer<typeof GifResultDTO>;
+
+export const GifSearchResponse = z.object({
+  results: z.array(GifResultDTO),
+});
+export type GifSearchResponse = z.infer<typeof GifSearchResponse>;
 
 // ---------- WebSocket events (server → client) ----------
 
@@ -130,6 +180,7 @@ export const WsEvent = z.discriminatedUnion("type", [
     data: z.object({ id: Id, serverId: Id }),
   }),
   z.object({ type: z.literal("SERVER_CREATE"), data: ServerWithChannelsDTO }),
+  z.object({ type: z.literal("USER_UPDATE"), data: z.object({ user: UserDTO }) }),
   z.object({ type: z.literal("PONG"), data: z.object({}).strict() }),
 ]);
 export type WsEvent = z.infer<typeof WsEvent>;

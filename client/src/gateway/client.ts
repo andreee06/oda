@@ -67,6 +67,9 @@ class GatewayClient {
       case "SERVER_CREATE":
         store.addServer(event.data);
         break;
+      case "USER_UPDATE":
+        store.updateUser(event.data.user);
+        break;
       case "PONG":
         break;
     }

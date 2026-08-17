@@ -1,5 +1,5 @@
 import type { FastifyPluginAsync } from "fastify";
-import { CreateChannelBody, CreateServerBody } from "@oda/shared";
+import { CreateChannelBody, CreateEmojiBody, CreateServerBody } from "@oda/shared";
 import { requireUser } from "../lib/guard.js";
 import {
   createServer,
@@ -9,6 +9,7 @@ import {
   renameServer,
 } from "../services/servers.js";
 import { createChannel } from "../services/channels.js";
+import { createEmoji, listEmojis } from "../services/emojis.js";
 
 export const serversRoutes: FastifyPluginAsync = async (app) => {
   app.post("/", async (req, reply) => {
@@ -41,6 +42,20 @@ export const serversRoutes: FastifyPluginAsync = async (app) => {
     const { id } = req.params as { id: string };
     await deleteServer(user.id, id);
     return reply.code(204).send();
+  });
+
+  app.get("/:id/emojis", async (req) => {
+    const user = await requireUser(req);
+    const { id } = req.params as { id: string };
+    return { emojis: await listEmojis(user.id, id) };
+  });
+
+  app.post("/:id/emojis", async (req, reply) => {
+    const user = await requireUser(req);
+    const { id } = req.params as { id: string };
+    const body = CreateEmojiBody.parse(req.body);
+    const emoji = await createEmoji(user.id, id, body);
+    return reply.code(201).send(emoji);
   });
 
   app.post("/:id/channels", async (req, reply) => {

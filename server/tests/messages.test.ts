@@ -3,8 +3,7 @@ import type { AddressInfo } from "node:net";
 import type { FastifyInstance } from "fastify";
 import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
 import WebSocket from "ws";
-import type { MessageDTO } from "@oda/shared";
-import { prisma } from "../src/lib/db.js";
+import type { MessageDTO } from "@oda/shared";import { prisma } from "../src/lib/db.js";
 import { buildApp } from "../src/app.js";
 import { addMember, cleanDb, setupUser } from "./helpers.js";
 
@@ -97,6 +96,68 @@ describe("messages routes", () => {
 
       const empty = await postMessage(alice.cookie, channelId, "");
       expect(empty.statusCode).toBe(400);
+    });
+
+    it("stores attachments and returns them on the DTO", async () => {
+      const { alice, channelId } = await setupChannel();
+      const res = await app.inject({
+        method: "POST",
+        url: `/api/channels/${channelId}/messages`,
+        headers: CLIENT_HEADERS,
+        cookies: { oda_session: alice.cookie },
+        payload: {
+          content: "look at this",
+          attachmentUrls: ["/media/oda-media/pic.png"],
+        },
+      });
+      expect(res.statusCode).toBe(201);
+      expect(res.json().attachments).toEqual([
+        { url: "/media/oda-media/pic.png" },
+      ]);
+
+      const inDb = await prisma.message.findFirst({ where: { channelId } });
+      expect(inDb?.attachments).toEqual([{ url: "/media/oda-media/pic.png" }]);
+    });
+
+    it("unfurls http links into OpenGraph embeds", async () => {
+      const { createServer } = await import("node:http");
+      const ogPage = `<html><head>
+        <meta property="og:title" content="Cool Page" />
+        <meta property="og:description" content="very cool" />
+        <meta property="og:image" content="https://example.com/og.png" />
+      </head><body>hi</body></html>`;
+      const linkServer = createServer((_req, res) => {
+        res.writeHead(200, { "content-type": "text/html" });
+        res.end(ogPage);
+      });
+      await new Promise<void>((r) => linkServer.listen(0, "127.0.0.1", r));
+      const linkPort = (linkServer.address() as AddressInfo).port;
+
+      try {
+        const { alice, channelId } = await setupChannel();
+        const res = await app.inject({
+          method: "POST",
+          url: `/api/channels/${channelId}/messages`,
+          headers: CLIENT_HEADERS,
+          cookies: { oda_session: alice.cookie },
+          payload: { content: `check this http://127.0.0.1:${linkPort}/page out` },
+        });
+        expect(res.statusCode).toBe(201);
+        const embeds = res.json().embeds;
+        expect(embeds).toHaveLength(1);
+        expect(embeds[0].title).toBe("Cool Page");
+        expect(embeds[0].description).toBe("very cool");
+        expect(embeds[0].imageUrl).toBe("https://example.com/og.png");
+      } finally {
+        linkServer.close();
+      }
+    });
+
+    it("leaves embeds empty for plain messages", async () => {
+      const { alice, channelId } = await setupChannel();
+      const res = await postMessage(alice.cookie, channelId, "no links here");
+      expect(res.statusCode).toBe(201);
+      expect(res.json().embeds).toEqual([]);
     });
 
     it("broadcasts MESSAGE_CREATE to connected channel members", async () => {
