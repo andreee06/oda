@@ -11,6 +11,7 @@ import { messagesRoutes } from "./routes/messages.js";
 import { uploadsRoutes } from "./routes/uploads.js";
 import { usersRoutes } from "./routes/users.js";
 import { gifsRoutes } from "./routes/gifs.js";
+import { inviteLinkRoutes, inviteServerRoutes } from "./routes/invites.js";
 import { gatewayPlugin } from "./gateway/index.js";
 import { Hub } from "./gateway/hub.js";
 
@@ -57,6 +58,8 @@ export async function buildApp(options?: {
   await app.register(uploadsRoutes, { prefix: "/api/uploads" });
   await app.register(usersRoutes, { prefix: "/api/users" });
   await app.register(gifsRoutes, { prefix: "/api/gifs" });
+  await app.register(inviteServerRoutes, { prefix: "/api/servers" });
+  await app.register(inviteLinkRoutes, { prefix: "/api/invites" });
   await app.register(gatewayPlugin, { hub });
 
   return app;

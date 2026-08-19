@@ -54,6 +54,7 @@ class GatewayClient {
     switch (event.type) {
       case "READY":
         store.setSession(event.data.user, event.data.servers);
+        store.setPresences(event.data.presences);
         break;
       case "MESSAGE_CREATE":
         store.addMessage(event.data);
@@ -70,9 +71,26 @@ class GatewayClient {
       case "USER_UPDATE":
         store.updateUser(event.data.user);
         break;
+      case "PRESENCE_UPDATE":
+        store.setPresence(event.data.userId, event.data.status);
+        break;
+      case "TYPING_START":
+        store.addTyping(event.data.channelId, event.data.user);
+        break;
       case "PONG":
         break;
     }
+  }
+
+  private typingSentAt = new Map<string, number>();
+
+  /** Send TYPING_START, max once per 2s per channel (server throttles too). */
+  sendTyping(channelId: string): void {
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
+    const last = this.typingSentAt.get(channelId) ?? 0;
+    if (Date.now() - last < 2_000) return;
+    this.typingSentAt.set(channelId, Date.now());
+    this.ws.send(JSON.stringify({ type: "TYPING_START", data: { channelId } }));
   }
 
   close(): void {

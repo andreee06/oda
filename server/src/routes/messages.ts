@@ -11,6 +11,7 @@ export const messagesRoutes: FastifyPluginAsync = async (app) => {
     const body = CreateMessageBody.parse(req.body);
 
     const message = await createMessage(user.id, id, body);
+    app.gateway.touch(user.id); // posting counts as presence activity
     app.gateway.dispatchToChannel(id, {
       type: "MESSAGE_CREATE",
       data: message,

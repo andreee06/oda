@@ -1,5 +1,6 @@
 import { BrowserRouter, Route, Routes } from "react-router";
 import AppShell from "./routes/AppShell";
+import InvitePage from "./routes/InvitePage";
 import LoginPage from "./routes/LoginPage";
 
 export default function App() {
@@ -7,6 +8,7 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/invite/:code" element={<InvitePage />} />
         <Route path="*" element={<AppShell />} />
       </Routes>
     </BrowserRouter>

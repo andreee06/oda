@@ -117,8 +117,10 @@ describe("gateway", () => {
       data: message,
     });
 
-    const received = await nextMessage(aliceWs);
-    expect(received.type).toBe("MESSAGE_CREATE");
+    // alice may first receive PRESENCE_UPDATE for bob's connect (they share
+    // the fixture server) — drain until the message we actually care about
+    let received = await nextMessage(aliceWs);
+    while (received.type !== "MESSAGE_CREATE") received = await nextMessage(aliceWs);
     expect((received.data as { content: string }).content).toBe("secret plans");
 
     const bobResult = await Promise.race([

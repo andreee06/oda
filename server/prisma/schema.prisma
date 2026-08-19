@@ -41,11 +41,16 @@ model Invite {
   code      String    @id // e.g. "oda-x7k2p9"
   creatorId String
   creator   User      @relation("InviteCreator", fields: [creatorId], references: [id])
+  // null = legacy account invite (register joins the oldest server);
+  // set = invite link bound to one specific server (slice 3)
+  serverId  String?
+  server    Server?   @relation(fields: [serverId], references: [id])
   maxUses   Int       @default(1)
   uses      Int       @default(0)
   expiresAt DateTime?
   createdAt DateTime  @default(now())
 
+  @@index([serverId])
   @@map("invites")
 }
 
@@ -58,6 +63,7 @@ model Server {
   channels  Channel[]
   members   ServerMember[]
   emojis    Emoji[]
+  invites   Invite[]
 
   @@map("servers")
 }

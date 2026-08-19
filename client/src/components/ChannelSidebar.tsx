@@ -1,6 +1,8 @@
+import { useState } from "react";
 import type { ChannelDTO } from "@oda/shared";
 import { api } from "../lib/api";
 import { useAppStore } from "../stores/app";
+import InviteModal from "./InviteModal";
 import UserPanel from "./UserPanel";
 
 export default function ChannelSidebar() {
@@ -13,6 +15,7 @@ export default function ChannelSidebar() {
   const user = useAppStore((s) => s.user);
 
   const isOwner = server && user && server.ownerId === user.id;
+  const [showInvites, setShowInvites] = useState(false);
 
   async function createChannel() {
     if (!server) return;
@@ -28,8 +31,17 @@ export default function ChannelSidebar() {
 
   return (
     <aside className="flex w-60 shrink-0 flex-col border-r border-zinc-800 bg-zinc-900">
-      <header className="truncate border-b border-zinc-800 px-4 py-3 font-semibold">
-        {server?.name ?? "Oda"}
+      <header className="flex items-center justify-between gap-2 border-b border-zinc-800 px-4 py-3">
+        <span className="truncate font-semibold">{server?.name ?? "Oda"}</span>
+        {isOwner && (
+          <button
+            onClick={() => setShowInvites(true)}
+            title="Invite people"
+            className="shrink-0 rounded px-1.5 py-0.5 text-xs text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
+          >
+            + invite
+          </button>
+        )}
       </header>
       <div className="flex-1 space-y-0.5 overflow-y-auto p-2">
         {server?.channels.map((c) => (
@@ -56,6 +68,9 @@ export default function ChannelSidebar() {
         </button>
       )}
       <UserPanel />
+      {showInvites && server && (
+        <InviteModal serverId={server.id} onClose={() => setShowInvites(false)} />
+      )}
     </aside>
   );
 }

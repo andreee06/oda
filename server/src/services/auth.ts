@@ -40,14 +40,16 @@ export async function register(body: RegisterBody) {
       where: { code: invite.code },
       data: { uses: { increment: 1 } },
     });
-    // v1 simplification: every new account auto-joins the oldest server.
-    // Real per-server invite links land in slice 3 (needs Invite.serverId).
-    const defaultServer = await tx.server.findFirst({
-      orderBy: { createdAt: "asc" },
-    });
-    if (defaultServer) {
+    // Slice 3: server-bound invite links join THAT server. Legacy code-only
+    // invites (serverId null) fall back to the oldest server.
+    const targetServerId =
+      invite.serverId ??
+      (
+        await tx.server.findFirst({ orderBy: { createdAt: "asc" } })
+      )?.id;
+    if (targetServerId) {
       await tx.serverMember.create({
-        data: { userId: user.id, serverId: defaultServer.id },
+        data: { userId: user.id, serverId: targetServerId },
       });
     }
     return user;

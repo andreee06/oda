@@ -21,15 +21,18 @@ servers and channels, and chat in real time.
 - custom server emoji with :shortcode: rendering
 - gif picker (giphy — needs a free api key in `server/.env`)
 - member list, optimistic sending, reconnect with backoff
-- tests for the whole backend (90 at last count)
+- online/idle/offline presence with Discord-style grouped member list
+- typing indicators
+- invite links (`/invite/<code>`) — join page for existing users, register
+  prefill for new ones, owner-only create/revoke
+- tests for the whole backend (76 at last count)
 
 ## what's not done yet
 
-- online presence + typing indicators
 - voice channels (going to use self-hosted [LiveKit](https://livekit.io) —
   not crazy enough to hand-roll WebRTC)
-- proper invite links (right now it's invite *codes*)
 - message edit/delete ui
+- roles beyond owner/member
 - actual deployment (looking at oracle's free tier)
 
 ## stack
@@ -79,6 +82,10 @@ npm run lint
   loop. keep a stable empty constant around.
 - prisma 7 doesn't regenerate the client on `migrate dev` — if the api starts
   500ing after a schema change, run `db:generate` first. lost some time there.
+- `ws` (and browsers) don't buffer websocket messages. attach your listener
+  BEFORE triggering the event, or the test flakes. obvious in hindsight.
+- presence is easy until you think about two tabs of the same user:
+  online when the first tab connects, offline when the LAST one closes.
 
 ## notes
 

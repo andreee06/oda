@@ -24,12 +24,16 @@
 - [x] link embeds (OpenGraph unfurl, 3s timeout, best-effort)
 - [x] custom server emoji (owner uploads, :shortcode: rendering, picker)
 
-## slice 3 — social stuff
+## slice 3 — social stuff ✅ (done 2026-08-19)
 
-- [ ] online/idle presence in member list
-- [ ] typing indicators (3s expiry)
-- [ ] proper invite-link UI (Invite.serverId, join via link)
-- [ ] roles beyond owner/member
+- [x] online/idle presence in member list (in-process hub, idle after 5min,
+      multi-tab safe, self never echoed own status)
+- [x] typing indicators (3s expiry, 2s throttle server+client, sender excluded)
+- [x] proper invite-link UI (Invite.serverId, /invite/:code join page,
+      register prefill via sessionStorage, accept for existing users,
+      owner-only create/list/revoke)
+- [x] ~~roles beyond owner/member~~ → deferred: SPEC freezes v1 at owner/member;
+      a real role system is its own slice (CRUD, hierarchy, permissions)
 
 ## slice 4 — voice
 

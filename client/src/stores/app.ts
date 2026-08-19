@@ -4,6 +4,8 @@ import type {
   EmojiDTO,
   MessageDTO,
   MessagePage,
+  PresenceSnapshot,
+  PresenceStatus,
   ServerWithChannelsDTO,
   UserDTO,
 } from "@oda/shared";
@@ -21,6 +23,10 @@ interface AppState {
   messages: Record<string, MessageDTO[]>;
   /** serverId → custom emoji */
   emojis: Record<string, EmojiDTO[]>;
+  /** userId → status; absence in snapshot/events = offline */
+  presence: Record<string, PresenceStatus>;
+  /** channelId → userId → displayName. Entries self-expire after 3s. */
+  typing: Record<string, Record<string, string>>;
   nextCursors: Record<string, string | null>;
   connectionStatus: ConnectionStatus;
   sendError: string | null;
@@ -37,6 +43,10 @@ interface AppState {
   addServer: (server: ServerWithChannelsDTO) => void;
   updateUser: (user: UserDTO) => void;
   addEmoji: (emoji: EmojiDTO) => void;
+  setPresences: (snapshot: PresenceSnapshot) => void;
+  setPresence: (userId: string, status: PresenceStatus) => void;
+  addTyping: (channelId: string, user: UserDTO) => void;
+  clearTyping: (channelId: string, userId: string) => void;
   setConnectionStatus: (status: ConnectionStatus) => void;
   sendMessage: (content: string, attachmentUrls?: string[]) => Promise<void>;
 }
@@ -49,15 +59,25 @@ const initialState = {
   activeChannelId: null,
   messages: {},
   emojis: {},
+  presence: {},
+  typing: {},
   nextCursors: {},
   connectionStatus: "connecting" as ConnectionStatus,
   sendError: null,
 };
 
+/** 3s of silence = stopped typing (SPEC). Timers live outside zustand state. */
+const TYPING_TTL_MS = 3_000;
+const typingTimers = new Map<string, ReturnType<typeof setTimeout>>();
+
 export const useAppStore = create<AppState>()((set, get) => ({
   ...initialState,
 
-  reset: () => set(initialState),
+  reset: () => {
+    for (const timer of typingTimers.values()) clearTimeout(timer);
+    typingTimers.clear();
+    set(initialState);
+  },
 
   setSession: (user, servers) => {
     set({ user, servers });
@@ -127,6 +147,8 @@ export const useAppStore = create<AppState>()((set, get) => ({
   },
 
   addMessage: (message) => {
+    // They sent the message — they can't still be typing it.
+    get().clearTyping(message.channelId, message.author.id);
     set((state) => {
       const list = state.messages[message.channelId];
       // Unknown channel (never opened) → skip; messages load on open.
@@ -239,6 +261,44 @@ export const useAppStore = create<AppState>()((set, get) => ({
         [emoji.serverId]: [...(state.emojis[emoji.serverId] ?? []), emoji],
       },
     })),
+
+  setPresences: (snapshot) => set({ presence: { ...snapshot } }),
+
+  setPresence: (userId, status) =>
+    set((state) => ({ presence: { ...state.presence, [userId]: status } })),
+
+  addTyping: (channelId, user) => {
+    const key = `${channelId}|${user.id}`;
+    const existing = typingTimers.get(key);
+    if (existing) clearTimeout(existing); // still typing → restart the clock
+    typingTimers.set(
+      key,
+      setTimeout(() => get().clearTyping(channelId, user.id), TYPING_TTL_MS),
+    );
+    set((state) => ({
+      typing: {
+        ...state.typing,
+        [channelId]: { ...(state.typing[channelId] ?? {}), [user.id]: user.displayName },
+      },
+    }));
+  },
+
+  clearTyping: (channelId, userId) => {
+    const key = `${channelId}|${userId}`;
+    const timer = typingTimers.get(key);
+    if (timer) clearTimeout(timer);
+    typingTimers.delete(key);
+    set((state) => {
+      const channelTyping = state.typing[channelId];
+      if (!channelTyping || !(userId in channelTyping)) return {};
+      const rest = { ...channelTyping };
+      delete rest[userId];
+      const typing = { ...state.typing };
+      if (Object.keys(rest).length === 0) delete typing[channelId];
+      else typing[channelId] = rest;
+      return { typing };
+    });
+  },
 
   setConnectionStatus: (connectionStatus) => set({ connectionStatus }),
 }));

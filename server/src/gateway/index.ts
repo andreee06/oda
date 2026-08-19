@@ -54,12 +54,29 @@ export const gatewayPlugin: FastifyPluginAsync<GatewayOptions> = async (
       } catch {
         return; // malformed JSON — ignore, don't crash the connection
       }
-      if (parsed.success && parsed.data.type === "PING") {
+      if (!parsed.success) return;
+      if (parsed.data.type === "PING") {
+        // keepalive only — does NOT count as presence activity
         conn.send({ type: "PONG", data: {} });
+        return;
+      }
+      conn.lastActivityAt = Date.now();
+      if (parsed.data.type === "TYPING_START") {
+        const { channelId } = parsed.data.data;
+        if (!conn.channelIds.has(channelId)) return; // not your channel
+        if (!hub.allowTyping(user.id, channelId)) return; // throttled
+        hub.dispatchToChannel(
+          channelId,
+          { type: "TYPING_START", data: { channelId, user: me.user } },
+          user.id, // don't echo typing back to the typer
+        );
       }
     });
     socket.on("close", () => hub.remove(conn));
 
-    conn.send({ type: "READY", data: me });
+    conn.send({
+      type: "READY",
+      data: { ...me, presences: hub.presenceSnapshot() },
+    });
   });
 };

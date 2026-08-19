@@ -166,12 +166,50 @@ export const GifSearchResponse = z.object({
 });
 export type GifSearchResponse = z.infer<typeof GifSearchResponse>;
 
+// ---------- presence & invites (slice 3) ----------
+
+export const PresenceStatus = z.enum(["online", "idle", "offline"]);
+export type PresenceStatus = z.infer<typeof PresenceStatus>;
+
+/** Presence snapshots only ever contain connected users — absence = offline. */
+export const PresenceSnapshot = z.record(Id, PresenceStatus.exclude(["offline"]));
+export type PresenceSnapshot = z.infer<typeof PresenceSnapshot>;
+
+export const InviteDTO = z.object({
+  code: z.string(),
+  // null = legacy account invite, joins the oldest server on register
+  serverId: Id.nullable(),
+  maxUses: z.number().int(),
+  uses: z.number().int(),
+  expiresAt: z.iso.datetime().nullable(),
+  createdAt: z.iso.datetime(),
+});
+export type InviteDTO = z.infer<typeof InviteDTO>;
+
+export const CreateInviteBody = z.object({
+  maxUses: z.number().int().min(1).max(100).default(10),
+  // null = never expires; default one week
+  expiresInHours: z.number().int().min(1).max(24 * 30).nullable().default(168),
+});
+export type CreateInviteBody = z.infer<typeof CreateInviteBody>;
+
+export const InvitePreviewDTO = z.object({
+  code: z.string(),
+  server: ServerDTO,
+  memberCount: z.number().int(),
+});
+export type InvitePreviewDTO = z.infer<typeof InvitePreviewDTO>;
+
 // ---------- WebSocket events (server → client) ----------
 
 export const WsEvent = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("READY"),
-    data: z.object({ user: UserDTO, servers: z.array(ServerWithChannelsDTO) }),
+    data: z.object({
+      user: UserDTO,
+      servers: z.array(ServerWithChannelsDTO),
+      presences: PresenceSnapshot,
+    }),
   }),
   z.object({ type: z.literal("MESSAGE_CREATE"), data: MessageDTO }),
   z.object({ type: z.literal("CHANNEL_CREATE"), data: ChannelDTO }),
@@ -181,6 +219,14 @@ export const WsEvent = z.discriminatedUnion("type", [
   }),
   z.object({ type: z.literal("SERVER_CREATE"), data: ServerWithChannelsDTO }),
   z.object({ type: z.literal("USER_UPDATE"), data: z.object({ user: UserDTO }) }),
+  z.object({
+    type: z.literal("PRESENCE_UPDATE"),
+    data: z.object({ userId: Id, status: PresenceStatus }),
+  }),
+  z.object({
+    type: z.literal("TYPING_START"),
+    data: z.object({ channelId: Id, user: UserDTO }),
+  }),
   z.object({ type: z.literal("PONG"), data: z.object({}).strict() }),
 ]);
 export type WsEvent = z.infer<typeof WsEvent>;
@@ -189,5 +235,9 @@ export type WsEvent = z.infer<typeof WsEvent>;
 
 export const WsClientMessage = z.discriminatedUnion("type", [
   z.object({ type: z.literal("PING") }),
+  z.object({
+    type: z.literal("TYPING_START"),
+    data: z.object({ channelId: Id }),
+  }),
 ]);
 export type WsClientMessage = z.infer<typeof WsClientMessage>;

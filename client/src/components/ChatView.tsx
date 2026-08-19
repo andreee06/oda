@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { gateway } from "../gateway/client";
 import { apiUpload } from "../lib/api";
 import { isImageOnlyMessage, renderContent } from "../lib/content";
 import { useAppStore } from "../stores/app";
@@ -29,6 +30,9 @@ export default function ChatView() {
     s.activeServerId ? (s.emojis[s.activeServerId] ?? NO_EMOJIS) : NO_EMOJIS,
   );
   const user = useAppStore((s) => s.user);
+  const typingUsers = useAppStore((s) =>
+    s.activeChannelId ? s.typing[s.activeChannelId] : undefined,
+  );
   const loadOlder = useAppStore((s) => s.loadOlder);
   const sendMessage = useAppStore((s) => s.sendMessage);
 
@@ -58,6 +62,19 @@ export default function ChatView() {
   }
 
   const isOwner = server && user && server.ownerId === user.id;
+
+  // "alice is typing…" — your own typing is never shown to you
+  const typingNames = Object.entries(typingUsers ?? {})
+    .filter(([id]) => id !== user?.id)
+    .map(([, name]) => name);
+  const typingText =
+    typingNames.length === 0
+      ? null
+      : typingNames.length === 1
+        ? `${typingNames[0]} is typing…`
+        : typingNames.length === 2
+          ? `${typingNames[0]} and ${typingNames[1]} are typing…`
+          : `${typingNames.length} people are typing…`;
 
   async function onSend(e: FormEvent) {
     e.preventDefault();
@@ -208,6 +225,9 @@ export default function ChatView() {
         </div>
       )}
 
+      {/* fixed height so the layout doesn't jump when someone types */}
+      <div className="h-5 px-4 text-xs text-zinc-500">{typingText}</div>
+
       <div className="relative p-3">
         {picker === "gif" && (
           <div className="absolute bottom-full right-3">
@@ -255,7 +275,10 @@ export default function ChatView() {
           </button>
           <input
             value={draft}
-            onChange={(e) => setDraft(e.target.value)}
+            onChange={(e) => {
+              setDraft(e.target.value);
+              gateway.sendTyping(channel.id);
+            }}
             placeholder={`Message #${channel.name}`}
             className="flex-1 bg-transparent py-2.5 text-sm outline-none placeholder:text-zinc-500"
           />

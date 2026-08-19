@@ -5,6 +5,8 @@ import type { WsEvent } from "@oda/shared";
 export class GatewayConnection {
   /** Flipped by heartbeatTick; set back to true on protocol-level pong. */
   isAlive = true;
+  /** Any non-PING client message (and REST posts via hub.touch) refresh this. */
+  lastActivityAt = Date.now();
   /** Channels this connection may receive events for (computed at connect). */
   readonly channelIds = new Set<string>();
   /** Servers this connection's user belongs to (for server-scoped events). */

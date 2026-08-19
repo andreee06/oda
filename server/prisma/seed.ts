@@ -40,14 +40,21 @@ if (!invite) {
     data: {
       code: `oda-${randomBytes(3).toString("hex")}`,
       creatorId: owner.id,
+      serverId: server.id, // slice 3: invites are bound to a server
       maxUses: 10,
     },
+  });
+} else if (!invite.serverId) {
+  // Backfill pre-slice-3 invites: attach them to the default server.
+  invite = await prisma.invite.update({
+    where: { code: invite.code },
+    data: { serverId: server.id },
   });
 }
 
 console.log("Seed OK");
 console.log(`  owner login:  ${username} / ${password}`);
 console.log(`  server:       ${server.name} (#general)`);
-console.log(`  invite code:  ${invite.code} (uses: ${invite.uses}/${invite.maxUses})`);
+console.log(`  invite code:  ${invite.code} (uses: ${invite.uses}/${invite.maxUses}, server-bound)`);
 
 await prisma.$disconnect();

@@ -20,14 +20,21 @@ describe("GET /api/gifs/search", () => {
     await prisma.$disconnect();
   });
 
-  it("returns 503 when no GIPHY key is configured (dev default)", async () => {
-    const { cookie } = await setupUser(app, "alice");
-    const res = await app.inject({
-      method: "GET",
-      url: "/api/gifs/search?q=cat",
-      cookies: { oda_session: cookie },
-    });
-    expect(res.statusCode).toBe(503);
+  it("returns 503 when no GIPHY key is configured", async () => {
+    const { config } = await import("../src/lib/config.js");
+    const realKey = config.GIPHY_API_KEY; // dev .env may have one
+    (config as { GIPHY_API_KEY: string }).GIPHY_API_KEY = "";
+    try {
+      const { cookie } = await setupUser(app, "alice");
+      const res = await app.inject({
+        method: "GET",
+        url: "/api/gifs/search?q=cat",
+        cookies: { oda_session: cookie },
+      });
+      expect(res.statusCode).toBe(503);
+    } finally {
+      (config as { GIPHY_API_KEY: string }).GIPHY_API_KEY = realKey;
+    }
   });
 
   it("maps GIPHY results to GifResultDTO when a key exists", async () => {

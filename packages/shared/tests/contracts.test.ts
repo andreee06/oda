@@ -3,12 +3,15 @@ import type { z } from "zod";
 import {
   CreateChannelBody,
   CreateEmojiBody,
+  CreateInviteBody,
   CreateMessageBody,
   CreateServerBody,
   EmbedDTO,
   EmojiDTO,
   GetMessagesQuery,
   GifSearchResponse,
+  InviteDTO,
+  InvitePreviewDTO,
   LoginBody,
   MeResponse,
   MessageDTO,
@@ -223,7 +226,7 @@ describe("WsEvent", () => {
       channels: [],
     };
     for (const event of [
-      { type: "READY", data: { user: userSample, servers: [server] } },
+      { type: "READY", data: { user: userSample, servers: [server], presences: {} } },
       { type: "MESSAGE_CREATE", data: messageSample },
       {
         type: "CHANNEL_CREATE",
@@ -242,11 +245,92 @@ describe("WsEvent", () => {
       WsEvent.safeParse({ type: "HACK_THE_PLANET", data: {} }).success,
     ).toBe(false);
   });
+
+  it("READY carries a presence snapshot (slice 3)", () => {
+    roundTrips(WsEvent, {
+      type: "READY",
+      data: {
+        user: userSample,
+        servers: [],
+        presences: { u1: "online", u2: "idle" },
+      },
+    });
+    // offline is never sent in the snapshot — absence means offline
+    expect(
+      WsEvent.safeParse({
+        type: "READY",
+        data: { user: userSample, servers: [], presences: { u1: "offline" } },
+      }).success,
+    ).toBe(false);
+  });
+
+  it("parses slice-3 presence + typing events", () => {
+    roundTrips(WsEvent, {
+      type: "PRESENCE_UPDATE",
+      data: { userId: "u1", status: "online" },
+    });
+    roundTrips(WsEvent, {
+      type: "PRESENCE_UPDATE",
+      data: { userId: "u1", status: "offline" },
+    });
+    roundTrips(WsEvent, {
+      type: "TYPING_START",
+      data: { channelId: "c1", user: userSample },
+    });
+    expect(
+      WsEvent.safeParse({
+        type: "PRESENCE_UPDATE",
+        data: { userId: "u1", status: "sleeping" },
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe("invites (slice 3)", () => {
+  it("round-trips invite DTOs", () => {
+    roundTrips(InviteDTO, {
+      code: "oda-d5aa8c",
+      serverId: "s1",
+      maxUses: 10,
+      uses: 1,
+      expiresAt: "2026-08-20T12:00:00.000Z",
+      createdAt: "2026-08-17T12:00:00.000Z",
+    });
+    roundTrips(InviteDTO, {
+      code: "x",
+      serverId: null,
+      maxUses: 1,
+      uses: 0,
+      expiresAt: null,
+      createdAt: "2026-08-17T12:00:00.000Z",
+    });
+    roundTrips(InvitePreviewDTO, {
+      code: "oda-d5aa8c",
+      server: { id: "s1", name: "The Boys", iconUrl: null, ownerId: "u1" },
+      memberCount: 3,
+    });
+  });
+
+  it("CreateInviteBody applies defaults and bounds", () => {
+    const parsed = roundTrips(CreateInviteBody, {});
+    expect(parsed.maxUses).toBe(10);
+    expect(parsed.expiresInHours).toBe(168);
+    expect(CreateInviteBody.safeParse({ maxUses: 0 }).success).toBe(false);
+    expect(CreateInviteBody.safeParse({ maxUses: 101 }).success).toBe(false);
+    roundTrips(CreateInviteBody, { maxUses: 1, expiresInHours: null });
+  });
 });
 
 describe("WsClientMessage", () => {
   it("accepts PING, rejects anything else", () => {
     roundTrips(WsClientMessage, { type: "PING" });
     expect(WsClientMessage.safeParse({ type: "PONG" }).success).toBe(false);
+  });
+
+  it("accepts TYPING_START (slice 3)", () => {
+    roundTrips(WsClientMessage, { type: "TYPING_START", data: { channelId: "c1" } });
+    expect(
+      WsClientMessage.safeParse({ type: "TYPING_START", data: {} }).success,
+    ).toBe(false);
   });
 });

@@ -2,13 +2,18 @@ import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router";
 import type { UserDTO } from "@oda/shared";
 import { api, ApiRequestError } from "../lib/api";
+import { PENDING_INVITE_KEY } from "./InvitePage";
 
 export default function LoginPage() {
-  const [mode, setMode] = useState<"login" | "register">("login");
+  // Landing here from an /invite/:code link stashes the code — register with it.
+  const pendingInvite = sessionStorage.getItem(PENDING_INVITE_KEY) ?? "";
+  const [mode, setMode] = useState<"login" | "register">(
+    pendingInvite ? "register" : "login",
+  );
   const [username, setUsername] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [password, setPassword] = useState("");
-  const [inviteCode, setInviteCode] = useState("");
+  const [inviteCode, setInviteCode] = useState(pendingInvite);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const navigate = useNavigate();
@@ -31,6 +36,7 @@ export default function LoginPage() {
         method: "POST",
         body,
       });
+      sessionStorage.removeItem(PENDING_INVITE_KEY);
       navigate("/");
     } catch (err) {
       setError(
