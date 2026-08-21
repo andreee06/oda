@@ -12,6 +12,10 @@ const Env = z.object({
   MINIO_ROOT_PASSWORD: z.string().default("oda-dev-only-change-me"),
   MINIO_BUCKET: z.string().default("oda-media"),
   GIPHY_API_KEY: z.string().default(""),
+  // LiveKit dev-mode defaults (compose runs --dev); real keys for hosting later
+  LIVEKIT_URL: z.string().default("ws://localhost:7880"),
+  LIVEKIT_API_KEY: z.string().default("devkey"),
+  LIVEKIT_API_SECRET: z.string().default("secret"),
 });
 
 export const config = Env.parse(process.env);

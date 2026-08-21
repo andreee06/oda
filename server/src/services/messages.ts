@@ -11,7 +11,7 @@ import { getServerForMember } from "./servers.js";
 import { unfurlUrls } from "./embeds.js";
 
 /** Load channel + verify the user is a member of its server (404 otherwise). */
-async function getChannelForMember(channelId: string, userId: string) {
+export async function getChannelForMember(channelId: string, userId: string) {
   const channel = await prisma.channel.findUnique({
     where: { id: channelId },
   });

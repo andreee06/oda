@@ -35,11 +35,16 @@
 - [x] ~~roles beyond owner/member~~ → deferred: SPEC freezes v1 at owner/member;
       a real role system is its own slice (CRUD, hierarchy, permissions)
 
-## slice 4 — voice
+## slice 4 — voice ✅ (done 2026-08-19)
 
-- [ ] livekit token endpoint
-- [ ] join/leave voice channels, mute/deafen, speaking indicator
-- [ ] real livekit keys (dev uses devkey/secret)
+- [x] livekit token endpoint (AccessToken JWT, room = channelId, member-only)
+- [x] join/leave voice channels, mute/deafen (deafen forces mute), speaking ring
+      (ActiveSpeakersChanged), roster under channel, VoicePanel controls
+- [x] voice roster lives in-process (VoiceRegistry) + VOICE_STATE broadcasts;
+      last-ws-close drops you from rosters (no ghosts after browser crash)
+- [x] livekit-client lazy-loaded (main bundle stayed ~103kB gzip)
+- [ ] real livekit keys (dev uses devkey/secret) → hosting slice
+- [ ] TURN/internet voice → hosting slice (LiveKit built-in TURN, needs config)
 
 ## later / maybe
 

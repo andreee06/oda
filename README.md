@@ -25,12 +25,12 @@ servers and channels, and chat in real time.
 - typing indicators
 - invite links (`/invite/<code>`) — join page for existing users, register
   prefill for new ones, owner-only create/revoke
-- tests for the whole backend (76 at last count)
+- voice channels (self-hosted LiveKit): join/leave, mute/deafen, speaking
+  indicator, roster under the channel, crash-safe cleanup
+- tests for the whole backend (82 at last count)
 
 ## what's not done yet
 
-- voice channels (going to use self-hosted [LiveKit](https://livekit.io) —
-  not crazy enough to hand-roll WebRTC)
 - message edit/delete ui
 - roles beyond owner/member
 - actual deployment (looking at oracle's free tier)
@@ -86,6 +86,8 @@ npm run lint
   BEFORE triggering the event, or the test flakes. obvious in hindsight.
 - presence is easy until you think about two tabs of the same user:
   online when the first tab connects, offline when the LAST one closes.
+- livekit-client is 530KB. dynamic `import()` on first voice join keeps the
+  main bundle at ~100kB gzip instead of 240.
 
 ## notes
 

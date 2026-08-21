@@ -18,6 +18,9 @@ import {
   RegisterBody,
   SetAvatarBody,
   UserDTO,
+  VoiceJoinResponse,
+  VoiceParticipantDTO,
+  VoiceStateBody,
   WsClientMessage,
   WsEvent,
 } from "../src/index.js";
@@ -226,7 +229,7 @@ describe("WsEvent", () => {
       channels: [],
     };
     for (const event of [
-      { type: "READY", data: { user: userSample, servers: [server], presences: {} } },
+      { type: "READY", data: { user: userSample, servers: [server], presences: {}, voiceStates: {} } },
       { type: "MESSAGE_CREATE", data: messageSample },
       {
         type: "CHANNEL_CREATE",
@@ -253,19 +256,19 @@ describe("WsEvent", () => {
         user: userSample,
         servers: [],
         presences: { u1: "online", u2: "idle" },
+        voiceStates: {},
       },
     });
     // offline is never sent in the snapshot — absence means offline
     expect(
       WsEvent.safeParse({
         type: "READY",
-        data: { user: userSample, servers: [], presences: { u1: "offline" } },
+        data: { user: userSample, servers: [], presences: { u1: "offline" }, voiceStates: {} },
       }).success,
     ).toBe(false);
   });
 
-  it("parses slice-3 presence + typing events", () => {
-    roundTrips(WsEvent, {
+  it("parses slice-3 presence + typing events", () => {    roundTrips(WsEvent, {
       type: "PRESENCE_UPDATE",
       data: { userId: "u1", status: "online" },
     });
@@ -321,8 +324,7 @@ describe("invites (slice 3)", () => {
   });
 });
 
-describe("WsClientMessage", () => {
-  it("accepts PING, rejects anything else", () => {
+describe("WsClientMessage", () => {  it("accepts PING, rejects anything else", () => {
     roundTrips(WsClientMessage, { type: "PING" });
     expect(WsClientMessage.safeParse({ type: "PONG" }).success).toBe(false);
   });
@@ -332,5 +334,49 @@ describe("WsClientMessage", () => {
     expect(
       WsClientMessage.safeParse({ type: "TYPING_START", data: {} }).success,
     ).toBe(false);
+  });
+});
+
+describe("voice (slice 4)", () => {
+  it("round-trips voice DTOs", () => {
+    roundTrips(VoiceParticipantDTO, {
+      user: userSample,
+      muted: false,
+      deafened: false,
+    });
+    roundTrips(VoiceJoinResponse, {
+      token: "jwt.jwt.jwt",
+      url: "ws://localhost:7880",
+    });
+  });
+
+  it("VoiceStateBody requires explicit booleans", () => {
+    roundTrips(VoiceStateBody, { muted: true, deafened: true });
+    expect(VoiceStateBody.safeParse({ muted: true }).success).toBe(false);
+    expect(VoiceStateBody.safeParse({}).success).toBe(false);
+  });
+
+  it("VOICE_STATE carries the full channel roster", () => {
+    roundTrips(WsEvent, {
+      type: "VOICE_STATE",
+      data: {
+        channelId: "c1",
+        participants: [{ user: userSample, muted: false, deafened: true }],
+      },
+    });
+  });
+
+  it("READY carries a voiceStates snapshot (slice 4)", () => {
+    roundTrips(WsEvent, {
+      type: "READY",
+      data: {
+        user: userSample,
+        servers: [],
+        presences: {},
+        voiceStates: {
+          c1: [{ user: userSample, muted: true, deafened: false }],
+        },
+      },
+    });
   });
 });

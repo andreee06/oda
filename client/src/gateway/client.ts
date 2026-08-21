@@ -55,6 +55,7 @@ class GatewayClient {
       case "READY":
         store.setSession(event.data.user, event.data.servers);
         store.setPresences(event.data.presences);
+        store.setVoiceStates(event.data.voiceStates);
         break;
       case "MESSAGE_CREATE":
         store.addMessage(event.data);
@@ -76,6 +77,9 @@ class GatewayClient {
         break;
       case "TYPING_START":
         store.addTyping(event.data.channelId, event.data.user);
+        break;
+      case "VOICE_STATE":
+        store.setVoiceState(event.data.channelId, event.data.participants);
         break;
       case "PONG":
         break;

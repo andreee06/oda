@@ -8,6 +8,8 @@ import type {
   PresenceStatus,
   ServerWithChannelsDTO,
   UserDTO,
+  VoiceParticipantDTO,
+  VoiceStatesSnapshot,
 } from "@oda/shared";
 import { api } from "../lib/api";
 
@@ -27,6 +29,12 @@ interface AppState {
   presence: Record<string, PresenceStatus>;
   /** channelId → userId → displayName. Entries self-expire after 3s. */
   typing: Record<string, Record<string, string>>;
+  /** channelId → voice roster (full snapshots from VOICE_STATE) */
+  voiceStates: Record<string, VoiceParticipantDTO[]>;
+  /** the voice channel I'm connected to, if any */
+  myVoiceChannelId: string | null;
+  /** userIds currently speaking (LiveKit ActiveSpeakersChanged) */
+  speaking: string[];
   nextCursors: Record<string, string | null>;
   connectionStatus: ConnectionStatus;
   sendError: string | null;
@@ -47,6 +55,10 @@ interface AppState {
   setPresence: (userId: string, status: PresenceStatus) => void;
   addTyping: (channelId: string, user: UserDTO) => void;
   clearTyping: (channelId: string, userId: string) => void;
+  setVoiceState: (channelId: string, participants: VoiceParticipantDTO[]) => void;
+  setVoiceStates: (snapshot: VoiceStatesSnapshot) => void;
+  setMyVoiceChannel: (channelId: string | null) => void;
+  setSpeaking: (userIds: string[]) => void;
   setConnectionStatus: (status: ConnectionStatus) => void;
   sendMessage: (content: string, attachmentUrls?: string[]) => Promise<void>;
 }
@@ -61,6 +73,9 @@ const initialState = {
   emojis: {},
   presence: {},
   typing: {},
+  voiceStates: {},
+  myVoiceChannelId: null,
+  speaking: [],
   nextCursors: {},
   connectionStatus: "connecting" as ConnectionStatus,
   sendError: null,
@@ -263,7 +278,6 @@ export const useAppStore = create<AppState>()((set, get) => ({
     })),
 
   setPresences: (snapshot) => set({ presence: { ...snapshot } }),
-
   setPresence: (userId, status) =>
     set((state) => ({ presence: { ...state.presence, [userId]: status } })),
 
@@ -299,6 +313,17 @@ export const useAppStore = create<AppState>()((set, get) => ({
       return { typing };
     });
   },
+
+  setVoiceState: (channelId, participants) =>
+    set((state) => ({
+      voiceStates: { ...state.voiceStates, [channelId]: participants },
+    })),
+
+  setVoiceStates: (snapshot) => set({ voiceStates: { ...snapshot } }),
+
+  setMyVoiceChannel: (myVoiceChannelId) => set({ myVoiceChannelId }),
+
+  setSpeaking: (speaking) => set({ speaking }),
 
   setConnectionStatus: (connectionStatus) => set({ connectionStatus }),
 }));

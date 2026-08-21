@@ -200,6 +200,31 @@ export const InvitePreviewDTO = z.object({
 });
 export type InvitePreviewDTO = z.infer<typeof InvitePreviewDTO>;
 
+// ---------- voice (slice 4) ----------
+
+export const VoiceParticipantDTO = z.object({
+  user: UserDTO,
+  muted: z.boolean(),
+  deafened: z.boolean(),
+});
+export type VoiceParticipantDTO = z.infer<typeof VoiceParticipantDTO>;
+
+export const VoiceStateBody = z.object({
+  muted: z.boolean(),
+  deafened: z.boolean(),
+});
+export type VoiceStateBody = z.infer<typeof VoiceStateBody>;
+
+export const VoiceJoinResponse = z.object({
+  token: z.string(),
+  url: z.string(), // livekit server websocket url
+});
+export type VoiceJoinResponse = z.infer<typeof VoiceJoinResponse>;
+
+/** channelId → full roster. Friends scale: full snapshots, no delta protocol. */
+export const VoiceStatesSnapshot = z.record(Id, z.array(VoiceParticipantDTO));
+export type VoiceStatesSnapshot = z.infer<typeof VoiceStatesSnapshot>;
+
 // ---------- WebSocket events (server → client) ----------
 
 export const WsEvent = z.discriminatedUnion("type", [
@@ -209,6 +234,7 @@ export const WsEvent = z.discriminatedUnion("type", [
       user: UserDTO,
       servers: z.array(ServerWithChannelsDTO),
       presences: PresenceSnapshot,
+      voiceStates: VoiceStatesSnapshot,
     }),
   }),
   z.object({ type: z.literal("MESSAGE_CREATE"), data: MessageDTO }),
@@ -226,6 +252,10 @@ export const WsEvent = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("TYPING_START"),
     data: z.object({ channelId: Id, user: UserDTO }),
+  }),
+  z.object({
+    type: z.literal("VOICE_STATE"),
+    data: z.object({ channelId: Id, participants: z.array(VoiceParticipantDTO) }),
   }),
   z.object({ type: z.literal("PONG"), data: z.object({}).strict() }),
 ]);

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { gateway } from "../gateway/client";
 import { apiUpload } from "../lib/api";
+import { joinVoice } from "../lib/voice";
 import { isImageOnlyMessage, renderContent } from "../lib/content";
 import { useAppStore } from "../stores/app";
 import Avatar from "./Avatar";
@@ -33,6 +34,8 @@ export default function ChatView() {
   const typingUsers = useAppStore((s) =>
     s.activeChannelId ? s.typing[s.activeChannelId] : undefined,
   );
+  const voiceStates = useAppStore((s) => s.voiceStates);
+  const myVoiceChannelId = useAppStore((s) => s.myVoiceChannelId);
   const loadOlder = useAppStore((s) => s.loadOlder);
   const sendMessage = useAppStore((s) => s.sendMessage);
 
@@ -57,6 +60,29 @@ export default function ChatView() {
     return (
       <div className="flex flex-1 items-center justify-center text-zinc-500">
         Select a channel
+      </div>
+    );
+  }
+
+  if (channel.type === "voice") {
+    const participants = voiceStates[channel.id] ?? [];
+    return (
+      <div className="flex flex-1 flex-col items-center justify-center gap-3 text-zinc-400">
+        <span className="text-4xl">🔊</span>
+        <span className="text-lg font-semibold text-zinc-200">{channel.name}</span>
+        <span className="text-sm">
+          {participants.length === 0
+            ? "No one here yet"
+            : `${participants.length} connected`}
+        </span>
+        {myVoiceChannelId !== channel.id && (
+          <button
+            onClick={() => void joinVoice(channel.id)}
+            className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500"
+          >
+            Join voice
+          </button>
+        )}
       </div>
     );
   }

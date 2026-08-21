@@ -3,10 +3,12 @@ import { WsClientMessage } from "@oda/shared";
 import { getMe, getSessionUser, SESSION_COOKIE } from "../services/auth.js";
 import { GatewayConnection } from "./connection.js";
 import { heartbeatTick, Hub } from "./hub.js";
+import type { VoiceRegistry } from "./voice.js";
 
 declare module "fastify" {
   interface FastifyInstance {
     gateway: Hub;
+    voice: VoiceRegistry;
   }
 }
 
@@ -14,6 +16,7 @@ export interface GatewayOptions {
   heartbeatMs?: number;
   /** Created and decorated at the root instance (register() encapsulates). */
   hub: Hub;
+  voice: VoiceRegistry;
 }
 
 export const gatewayPlugin: FastifyPluginAsync<GatewayOptions> = async (
@@ -21,6 +24,7 @@ export const gatewayPlugin: FastifyPluginAsync<GatewayOptions> = async (
   opts,
 ) => {
   const hub = opts.hub;
+  const voice = opts.voice;
 
   const interval = setInterval(
     () => heartbeatTick(hub),
@@ -72,11 +76,30 @@ export const gatewayPlugin: FastifyPluginAsync<GatewayOptions> = async (
         );
       }
     });
-    socket.on("close", () => hub.remove(conn));
+    socket.on("close", () => {
+      hub.remove(conn);
+      // last tab closed → drop them from any voice roster they were in
+      let stillConnected = false;
+      for (const other of hub) {
+        if (other.userId === user.id) stillConnected = true;
+      }
+      if (!stillConnected) {
+        for (const { channelId, serverId, roster } of voice.removeUserEverywhere(user.id)) {
+          hub.dispatchToServer(serverId, {
+            type: "VOICE_STATE",
+            data: { channelId, participants: roster },
+          });
+        }
+      }
+    });
 
     conn.send({
       type: "READY",
-      data: { ...me, presences: hub.presenceSnapshot() },
+      data: {
+        ...me,
+        presences: hub.presenceSnapshot(),
+        voiceStates: voice.snapshot(conn.serverIds),
+      },
     });
   });
 };

@@ -142,7 +142,7 @@ export const createMessage: RouteHandler = async (req, reply) => {
 5. An image upload appears inline for all members within 2s. ✅ slice 2
 6. Presence list updates within 5s of connect/disconnect; typing indicator shows
    and expires after 3s of silence. ✅ slice 3 (idle transitions lag one 30s heartbeat tick)
-7. Two users in a voice channel hear each other through LiveKit (dev: same LAN).
+7. Two users in a voice channel hear each other through LiveKit (dev: same LAN). ✅ slice 4 (signaling/roster/token verified automated; audio needs manual two-browser check)
 8. `npm run typecheck && npm run lint && npm test` pass from a clean clone.
 9. Invite-only: no route permits account creation without a valid invite code.
 

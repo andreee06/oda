@@ -12,8 +12,10 @@ import { uploadsRoutes } from "./routes/uploads.js";
 import { usersRoutes } from "./routes/users.js";
 import { gifsRoutes } from "./routes/gifs.js";
 import { inviteLinkRoutes, inviteServerRoutes } from "./routes/invites.js";
+import { voiceRoutes } from "./routes/voice.js";
 import { gatewayPlugin } from "./gateway/index.js";
 import { Hub } from "./gateway/hub.js";
+import { VoiceRegistry } from "./gateway/voice.js";
 
 export async function buildApp(options?: {
   logger?: boolean;
@@ -53,14 +55,17 @@ export async function buildApp(options?: {
   await app.register(serversRoutes, { prefix: "/api/servers" });
   const hub = new Hub();
   app.decorate("gateway", hub);
+  const voice = new VoiceRegistry();
+  app.decorate("voice", voice);
   await app.register(channelsRoutes, { prefix: "/api/channels" });
   await app.register(messagesRoutes, { prefix: "/api/channels" });
+  await app.register(voiceRoutes, { prefix: "/api/channels" });
   await app.register(uploadsRoutes, { prefix: "/api/uploads" });
   await app.register(usersRoutes, { prefix: "/api/users" });
   await app.register(gifsRoutes, { prefix: "/api/gifs" });
   await app.register(inviteServerRoutes, { prefix: "/api/servers" });
   await app.register(inviteLinkRoutes, { prefix: "/api/invites" });
-  await app.register(gatewayPlugin, { hub });
+  await app.register(gatewayPlugin, { hub, voice });
 
   return app;
 }
